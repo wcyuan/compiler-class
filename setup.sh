@@ -10,4 +10,5 @@ tar -xf student-dist.tar.gz
 ln -s /usr/class/cs143/cool ~/cool
 echo PATH=/usr/class/cs143/cool/bin:\$PATH >> ~/.bashrc
 wget https://raw.githubusercontent.com/wcyuan/Scripts/master/dotfiles/dot.screenrc -O ~/.screenrc
-
+cd ~
+git clone https://github.com/wcyuan/compiler-class.git

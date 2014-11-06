@@ -45,6 +45,9 @@ extern YYSTYPE cool_yylval;
 
 %}
 
+%START COMMENT
+int comment_depth = 0;
+
 /*
  * Define names for regular expressions here.
  */
@@ -88,12 +91,32 @@ RE_BOOL         (t[Rr][Uu][Ee]|f[Aa][Ll][Ss][Ee])
 RE_OBJECTID     [a-z][A-Za-z0-9_]*
 RE_TYPEID       [A-Z][A-Za-z0-9_]*
 
-RE_WHITESPACE   [ \n\f\r\t\v]+
+RE_WHITESPACE   [ \f\r\t\v]+
+RE_NEWLINE      \n
+
+RE_COMMENTSTART "(*"
+RE_COMMENTEND   "*)"
 
 %%
 
-{RE_WHITESPACE}   ;
+{RE_NEWLINE}      { curr_lineno++; }
 
+ /*
+  *  Nested comments
+  */
+<COMMENT>{
+    {RE_COMMENTEND} {
+          BEGIN(INITIAL);
+    }
+    . ;
+}
+<INITIAL>{
+
+{RE_COMMENTSTART} {
+    BEGIN(COMMENT);
+}
+
+{RE_WHITESPACE}   ;
  /*
   *  Single-character operators
   */
@@ -127,11 +150,6 @@ RE_WHITESPACE   [ \n\f\r\t\v]+
 }
 
  /*
-  *  Nested comments
-  */
-
-
- /*
   *  The multiple-character operators.
   */
 {RE_DARROW}		{ return (DARROW); }
@@ -161,12 +179,28 @@ RE_WHITESPACE   [ \n\f\r\t\v]+
 {RE_NOT}	{ return (NOT); }
 
  /*
+  * Object Ids
+  */
+{RE_OBJECTID} {
+    cool_yylval.symbol = idtable.add_string(yytext);
+    return (OBJECTID);
+}
+
+ /*
+  * Type Ids
+  */
+{RE_TYPEID} {
+    cool_yylval.symbol = idtable.add_string(yytext);
+    return (TYPEID);
+}
+
+ /*
   *  String constants (C syntax)
   *  Escape sequence \c is accepted for all characters c. Except for 
   *  \n \t \b \f, the result is c.
   *
   */
 
-
+}
 
 %%

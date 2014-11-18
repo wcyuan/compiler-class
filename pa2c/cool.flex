@@ -156,7 +156,7 @@ RE_STRING_END   "\""
         BEGIN(IN_STRING);
  	return (ERROR);
     }
-    . {
+    {RE_NEWLINE}|. {
         if (string_length >= MAX_STR_CONST) {
             cool_yylval.error_msg = "String constant too long";
             BEGIN(INITIAL);
@@ -183,12 +183,13 @@ RE_STRING_END   "\""
     . ;
 }
 
-{RE_NEWLINE}      { curr_lineno++; }
 
  /*
   *  Nested comments
   */
 <MULTILINE_COMMENT>{
+    {RE_NEWLINE}      { curr_lineno++; }
+
     {RE_COMMENTSTART} {
         comment_depth++;
     }
@@ -203,6 +204,8 @@ RE_STRING_END   "\""
 }
 
 <INITIAL>{
+
+{RE_NEWLINE}      { curr_lineno++; }
 
 {RE_COMMENT_1LN} {
     BEGIN(ONELINE_COMMENT);

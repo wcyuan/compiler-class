@@ -1,6 +1,3 @@
-	-1 (backslash)	 various backslashes in strings
-	-1 (backslash2)	 more backslashes in strings
-	-1 (comment_in_string)	 comment in string
 	-1 (eofstring)	  eof in a string
 	-1 (escapedeof)	 escaped eof in a string
 	-1 (escapednull)	 escaped null char in a string
@@ -12,4 +9,3 @@
 	-1 (opencomment)	 no matching closing comment
 	-1 (pathologicalstrings)	 some pathological strings
 	-1 (s33)	 unterminated comment
-	-1 (stringwithescapes)	 a long string with escaped characters

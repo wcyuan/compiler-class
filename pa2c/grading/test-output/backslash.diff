@@ -1,4 +1,0 @@
-3c3
-< STR_CONST "I'm about to excape a newline \n"
----
-> LONGERROR

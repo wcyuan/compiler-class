@@ -1,3 +1,0 @@
-#name "./stringwithescapes.cool"
-#58 ERROR "Unterminated string constant"
-#58 INT_CONST 42

@@ -121,6 +121,17 @@ RE_STRING_END   "\""
   *
   */
 
+    {RE_NULL_CHAR} {
+        cool_yylval.error_msg = "String contains null character";
+        BEGIN(GOTO_EOS);
+ 	return (ERROR);
+    }
+    <<EOF>> {
+        cool_yylval.error_msg = "EOF in string constant";
+        BEGIN(INITIAL);
+ 	return (ERROR);
+    }
+
     {RE_STRING_END} {
         string_buf[string_length] = '\0';
         cool_yylval.symbol = stringtable.add_string(string_buf);
@@ -135,16 +146,6 @@ RE_STRING_END   "\""
     }
     {RE_BACKSLASH} {
         BEGIN(ESCAPED_STRING);
-    }
-    {RE_NULL_CHAR} {
-        cool_yylval.error_msg = "String contains null character";
-        BEGIN(GOTO_EOS);
- 	return (ERROR);
-    }
-    <<EOF>> {
-        cool_yylval.error_msg = "EOF in string constant";
-        BEGIN(INITIAL);
- 	return (ERROR);
     }
     . {
         if (string_length >= MAX_STR_CONST-1) {
@@ -187,7 +188,10 @@ RE_STRING_END   "\""
 }
 
 <GOTO_EOS>{
-    {RE_NEWLINE} { curr_lineno++; }
+    {RE_NEWLINE} {
+        BEGIN(INITIAL);
+        curr_lineno++;
+    }
 
     {RE_STRING_END} {
         BEGIN(INITIAL);

@@ -43,16 +43,20 @@ extern YYSTYPE cool_yylval;
  *  Add Your own definitions here
  */
 
+int comment_depth = 0;
+int string_length = 0;
+
 %}
 
-%START COMMENT
-int comment_depth = 0;
+%START COMMENT IN_STRING ESCAPED_STRING
 
 /*
  * Define names for regular expressions here.
  */
 
+RE_PERIOD       "\."
 RE_COMMA        ,
+RE_COLON        :
 RE_SEMICOLON    ;
 RE_PLUS         "+"
 RE_MINUS        "-"
@@ -61,8 +65,10 @@ RE_DIV          "/"
 RE_TILDE        "~"
 RE_LT           "<"
 RE_EQUALS       "="
-RE_RPAREN       "("
-RE_LPAREN       ")"
+RE_LPAREN       "("
+RE_RPAREN       ")"
+RE_LBRACE       "{"
+RE_RBRACE       "}"
 
 RE_DARROW       =>
 RE_ASSIGN       "<-"
@@ -93,11 +99,78 @@ RE_TYPEID       [A-Z][A-Za-z0-9_]*
 
 RE_WHITESPACE   [ \f\r\t\v]+
 RE_NEWLINE      \n
+RE_NULL_CHAR    \0
+RE_BACKSLASH    \\
 
 RE_COMMENTSTART "(*"
 RE_COMMENTEND   "*)"
 
+RE_STRING_START "\""
+RE_STRING_END   "\""
+
 %%
+
+<IN_STRING>{
+ /*
+  *  String constants (C syntax)
+  *  Escape sequence \c is accepted for all characters c. Except for 
+  *  \n \t \b \f, the result is c.
+  *
+  */
+
+    {RE_STRING_END} {
+        string_buf[string_length] = '\0';
+        cool_yylval.symbol = stringtable.add_string(string_buf);
+        BEGIN(INITIAL);
+        return (STR_CONST);
+    }
+    {RE_NEWLINE} {
+        BEGIN(INITIAL);
+        cool_yylval.error_msg = "Unterminated string constant";
+        curr_lineno++;
+        return (ERROR);
+    }
+    {RE_BACKSLASH} {
+        BEGIN(ESCAPED_STRING);
+    }
+    {RE_NULL_CHAR} {
+        cool_yylval.error_msg = "String contains null character";
+ 	return (ERROR);
+    }
+    . {
+        if (string_length >= MAX_STR_CONST) {
+	    cool_yylval.error_msg = "String constant too long";
+            BEGIN(INITIAL);
+ 	    return (ERROR);
+	}
+ 	string_buf[string_length++] = yytext[0];
+    }
+}
+
+<ESCAPED_STRING>{
+    {RE_NULL_CHAR} {
+        cool_yylval.error_msg = "String contains null character";
+        BEGIN(IN_STRING);
+ 	return (ERROR);
+    }
+    . {
+        if (string_length >= MAX_STR_CONST) {
+            cool_yylval.error_msg = "String constant too long";
+            BEGIN(INITIAL);
+            return (ERROR);
+	}
+        char c = yytext[0];
+        switch (c) {
+            case 'n':  c = '\n';      break;
+            case 'b':  c = '\b';      break;
+            case 't':  c = '\t';      break;
+            case 'f':  c = '\f';      break;
+            case '\n': curr_lineno++; break;
+        }
+ 	string_buf[string_length++] = c;
+        BEGIN(IN_STRING);
+    }
+}
 
 {RE_NEWLINE}      { curr_lineno++; }
 
@@ -105,23 +178,40 @@ RE_COMMENTEND   "*)"
   *  Nested comments
   */
 <COMMENT>{
+    {RE_COMMENTSTART} {
+        comment_depth++;
+    }
     {RE_COMMENTEND} {
-          BEGIN(INITIAL);
+        comment_depth--;
+	if (comment_depth <= 0) {
+	    comment_depth = 0;
+ 	    BEGIN(INITIAL);
+	}
     }
     . ;
 }
+
 <INITIAL>{
 
 {RE_COMMENTSTART} {
     BEGIN(COMMENT);
+    comment_depth = 1;
+}
+
+{RE_COMMENTEND} {
+    cool_yylval.error_msg = "Unmatched *)";
+    return (ERROR);
 }
 
 {RE_WHITESPACE}   ;
+
  /*
   *  Single-character operators
   */
 
+{RE_PERIOD}       |
 {RE_COMMA}        |
+{RE_COLON}        |
 {RE_SEMICOLON}    |
 {RE_PLUS}         |
 {RE_MINUS}        |
@@ -131,7 +221,9 @@ RE_COMMENTEND   "*)"
 {RE_LT}           |
 {RE_EQUALS}       |
 {RE_RPAREN}       |
-{RE_LPAREN}       { return (int)yytext[0]; }
+{RE_LPAREN}       |
+{RE_RBRACE}       |
+{RE_LBRACE}       { return (int)yytext[0]; }
 
  /*
   * Bool values
@@ -194,12 +286,21 @@ RE_COMMENTEND   "*)"
     return (TYPEID);
 }
 
+{RE_STRING_START} {
+    BEGIN(IN_STRING);
+    string_length = 0;
+}
+
+
  /*
-  *  String constants (C syntax)
-  *  Escape sequence \c is accepted for all characters c. Except for 
-  *  \n \t \b \f, the result is c.
-  *
+  * Invalid characters are errors where the error message is just the single character
   */
+. {
+    string_buf[0] = yytext[0];
+    string_buf[1] = '\0';
+    cool_yylval.error_msg = string_buf;
+    return (ERROR);
+}
 
 }
 

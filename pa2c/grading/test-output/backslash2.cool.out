@@ -1,5 +1,0 @@
-LONGERROR
-LONGERROR
-STR_CONST "This is, though \\\n"
-STR_CONST "\\"
-STR_CONST "It's fine to have this: \n in a string"

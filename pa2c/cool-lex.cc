@@ -1139,7 +1139,7 @@ YY_RULE_SETUP
 {
         cool_yylval.error_msg = "Unterminated string constant";
         curr_lineno++;
-        BEGIN(GOTO_EOS);
+        BEGIN(INITIAL);
         return (ERROR);
     }
 	YY_BREAK

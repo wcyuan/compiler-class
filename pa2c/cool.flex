@@ -130,7 +130,7 @@ RE_STRING_END   "\""
     {RE_NEWLINE} {
         cool_yylval.error_msg = "Unterminated string constant";
         curr_lineno++;
-        BEGIN(GOTO_EOS);
+        BEGIN(INITIAL);
         return (ERROR);
     }
     {RE_BACKSLASH} {

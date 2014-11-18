@@ -1,4 +1,1 @@
-	-1 (backslash2)	 more backslashes in strings
 	-1 (null_in_string_unescaped_newline)	 null and unescaped newline in string
-	-1 (s19)	 unescaped newline
-	-1 (wq0607-c4)	 sequence of quotes, backslashes, and double-dash comment symbols

@@ -48,7 +48,7 @@ int string_length = 0;
 
 %}
 
-%START COMMENT IN_STRING ESCAPED_STRING
+%START MULTILINE_COMMENT ONELINE_COMMENT IN_STRING ESCAPED_STRING
 
 /*
  * Define names for regular expressions here.
@@ -104,6 +104,8 @@ RE_BACKSLASH    \\
 
 RE_COMMENTSTART "(*"
 RE_COMMENTEND   "*)"
+
+RE_COMMENT_1LN  --
 
 RE_STRING_START "\""
 RE_STRING_END   "\""
@@ -172,12 +174,20 @@ RE_STRING_END   "\""
     }
 }
 
+<ONELINE_COMMENT>{
+    {RE_NEWLINE}      {
+        curr_lineno++;
+        BEGIN(INITIAL);
+    }
+    . ;
+}
+
 {RE_NEWLINE}      { curr_lineno++; }
 
  /*
   *  Nested comments
   */
-<COMMENT>{
+<MULTILINE_COMMENT>{
     {RE_COMMENTSTART} {
         comment_depth++;
     }
@@ -193,8 +203,12 @@ RE_STRING_END   "\""
 
 <INITIAL>{
 
+{RE_COMMENT_1LN} {
+    BEGIN(ONELINE_COMMENT);
+}
+
 {RE_COMMENTSTART} {
-    BEGIN(COMMENT);
+    BEGIN(MULTILINE_COMMENT);
     comment_depth = 1;
 }
 

@@ -45,10 +45,12 @@ extern YYSTYPE cool_yylval;
 
 int comment_depth = 0;
 int string_length = 0;
+int string_escape = 0;
+int string_error = 0;
 
 %}
 
-%START MULTILINE_COMMENT ONELINE_COMMENT IN_STRING ESCAPED_STRING GOTO_EOS
+%START MULTILINE_COMMENT ONELINE_COMMENT IN_STRING
 
 /*
  * Define names for regular expressions here.
@@ -122,82 +124,65 @@ RE_STRING_END   "\""
   */
 
     {RE_NULL_CHAR} {
-        cool_yylval.error_msg = "String contains null character";
-        BEGIN(GOTO_EOS);
- 	return (ERROR);
-    }
-    <<EOF>> {
-        cool_yylval.error_msg = "EOF in string constant";
-        BEGIN(INITIAL);
- 	return (ERROR);
-    }
-
-    {RE_STRING_END} {
-        string_buf[string_length] = '\0';
-        cool_yylval.symbol = stringtable.add_string(string_buf);
-        BEGIN(INITIAL);
-        return (STR_CONST);
-    }
-    {RE_NEWLINE} {
-        cool_yylval.error_msg = "Unterminated string constant";
-        curr_lineno++;
-        BEGIN(INITIAL);
-        return (ERROR);
-    }
-    {RE_BACKSLASH} {
-        BEGIN(ESCAPED_STRING);
-    }
-    . {
-        if (string_length >= MAX_STR_CONST-1) {
-	    cool_yylval.error_msg = "String constant too long";
-            BEGIN(GOTO_EOS);
- 	    return (ERROR);
-	}
- 	string_buf[string_length++] = yytext[0];
-    }
-}
-
-<ESCAPED_STRING>{
-    {RE_NULL_CHAR} {
-        cool_yylval.error_msg = "String contains null character";
-        BEGIN(GOTO_EOS);
- 	return (ERROR);
-    }
-    <<EOF>> {
-        cool_yylval.error_msg = "EOF in string constant";
-        BEGIN(INITIAL);
- 	return (ERROR);
-    }
-    {RE_NEWLINE}|. {
-        if (string_length >= MAX_STR_CONST-1) {
-            cool_yylval.error_msg = "String constant too long";
-            BEGIN(GOTO_EOS);
+        if (!string_error) {
+            string_error = 1;
+            cool_yylval.error_msg = "String contains null character";
             return (ERROR);
-	}
-        char c = yytext[0];
-        switch (c) {
-            case 'n':  c = '\n';      break;
-            case 'b':  c = '\b';      break;
-            case 't':  c = '\t';      break;
-            case 'f':  c = '\f';      break;
-            case '\n': curr_lineno++; break;
         }
- 	string_buf[string_length++] = c;
-        BEGIN(IN_STRING);
+        string_error = 1;
     }
-}
-
-<GOTO_EOS>{
-    {RE_NEWLINE} {
+    <<EOF>> {
         BEGIN(INITIAL);
-        curr_lineno++;
+        if (!string_error) {
+            cool_yylval.error_msg = "EOF in string constant";
+            return (ERROR);
+        }
     }
 
-    {RE_STRING_END} {
-        BEGIN(INITIAL);
+    {RE_NEWLINE}|. {
+        char c = yytext[0];
+        if (!string_escape && c == '"') {
+            BEGIN(INITIAL);
+            if (!string_error) {
+                string_buf[string_length] = '\0';
+                cool_yylval.symbol = stringtable.add_string(string_buf);
+                return (STR_CONST);
+            }
+        }
+        if (!string_escape && c == '\n') {
+            BEGIN(INITIAL);
+            curr_lineno++;
+            if (!string_error) {
+                cool_yylval.error_msg = "Unterminated string constant";
+                return (ERROR);
+            }
+        }
+        if (!string_escape && c == '\\') {
+            string_escape = 1;
+        }
+        else {
+            if (c == '\n') {
+                curr_lineno++;
+            }
+            if (string_escape) {
+                switch (c) {
+                    case 'n':  c = '\n';      break;
+                    case 'b':  c = '\b';      break;
+                    case 't':  c = '\t';      break;
+                    case 'f':  c = '\f';      break;
+                }
+            }
+            string_escape = 0;
+            if (!string_error && string_length >= MAX_STR_CONST-1) {
+                string_error = 1;
+                cool_yylval.error_msg = "String constant too long";
+                return (ERROR);
+            }
+            if (!string_error) {
+                string_buf[string_length++] = c;
+            }
+        }
     }
-
-    . ;
 }
 
 <ONELINE_COMMENT>{
@@ -338,6 +323,8 @@ RE_STRING_END   "\""
 {RE_STRING_START} {
     BEGIN(IN_STRING);
     string_length = 0;
+    string_escape = 0;
+    string_error = 0;
 }
 
 

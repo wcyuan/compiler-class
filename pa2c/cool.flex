@@ -48,7 +48,7 @@ int string_length = 0;
 
 %}
 
-%START MULTILINE_COMMENT ONELINE_COMMENT IN_STRING ESCAPED_STRING
+%START MULTILINE_COMMENT ONELINE_COMMENT IN_STRING ESCAPED_STRING GOTO_EOS
 
 /*
  * Define names for regular expressions here.
@@ -128,9 +128,9 @@ RE_STRING_END   "\""
         return (STR_CONST);
     }
     {RE_NEWLINE} {
-        BEGIN(INITIAL);
         cool_yylval.error_msg = "Unterminated string constant";
         curr_lineno++;
+        BEGIN(GOTO_EOS);
         return (ERROR);
     }
     {RE_BACKSLASH} {
@@ -138,6 +138,7 @@ RE_STRING_END   "\""
     }
     {RE_NULL_CHAR} {
         cool_yylval.error_msg = "String contains null character";
+        BEGIN(GOTO_EOS);
  	return (ERROR);
     }
     <<EOF>> {
@@ -146,9 +147,9 @@ RE_STRING_END   "\""
  	return (ERROR);
     }
     . {
-        if (string_length >= MAX_STR_CONST) {
+        if (string_length >= MAX_STR_CONST-1) {
 	    cool_yylval.error_msg = "String constant too long";
-            BEGIN(INITIAL);
+            BEGIN(GOTO_EOS);
  	    return (ERROR);
 	}
  	string_buf[string_length++] = yytext[0];
@@ -158,7 +159,7 @@ RE_STRING_END   "\""
 <ESCAPED_STRING>{
     {RE_NULL_CHAR} {
         cool_yylval.error_msg = "String contains null character";
-        BEGIN(IN_STRING);
+        BEGIN(GOTO_EOS);
  	return (ERROR);
     }
     <<EOF>> {
@@ -167,9 +168,9 @@ RE_STRING_END   "\""
  	return (ERROR);
     }
     {RE_NEWLINE}|. {
-        if (string_length >= MAX_STR_CONST) {
+        if (string_length >= MAX_STR_CONST-1) {
             cool_yylval.error_msg = "String constant too long";
-            BEGIN(INITIAL);
+            BEGIN(GOTO_EOS);
             return (ERROR);
 	}
         char c = yytext[0];
@@ -185,8 +186,18 @@ RE_STRING_END   "\""
     }
 }
 
+<GOTO_EOS>{
+    {RE_NEWLINE} { curr_lineno++; }
+
+    {RE_STRING_END} {
+        BEGIN(INITIAL);
+    }
+
+    . ;
+}
+
 <ONELINE_COMMENT>{
-    {RE_NEWLINE}      {
+    {RE_NEWLINE} {
         curr_lineno++;
         BEGIN(INITIAL);
     }
@@ -198,7 +209,7 @@ RE_STRING_END   "\""
   *  Nested comments
   */
 <MULTILINE_COMMENT>{
-    {RE_NEWLINE}      { curr_lineno++; }
+    {RE_NEWLINE} { curr_lineno++; }
 
     {RE_COMMENTSTART} {
         comment_depth++;

@@ -26,5 +26,8 @@
 #5 STR_CONST "\""
 #5 ERROR "\\"
 #6 ERROR "Unterminated string constant"
-#6 STR_CONST "-\""
+#6 ERROR "\\"
+#6 '-'
+#6 ERROR "\\"
+#6 STR_CONST ""
 #6 ERROR "\\"

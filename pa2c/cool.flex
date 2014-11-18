@@ -69,6 +69,7 @@ RE_LPAREN       "("
 RE_RPAREN       ")"
 RE_LBRACE       "{"
 RE_RBRACE       "}"
+RE_ATSIGN       @
 
 RE_DARROW       =>
 RE_ASSIGN       "<-"
@@ -234,6 +235,7 @@ RE_STRING_END   "\""
 {RE_TILDE}        |
 {RE_LT}           |
 {RE_EQUALS}       |
+{RE_ATSIGN}       |
 {RE_RPAREN}       |
 {RE_LPAREN}       |
 {RE_RBRACE}       |

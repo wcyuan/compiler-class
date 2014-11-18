@@ -140,6 +140,11 @@ RE_STRING_END   "\""
         cool_yylval.error_msg = "String contains null character";
  	return (ERROR);
     }
+    <<EOF>> {
+        cool_yylval.error_msg = "EOF in string constant";
+        BEGIN(INITIAL);
+ 	return (ERROR);
+    }
     . {
         if (string_length >= MAX_STR_CONST) {
 	    cool_yylval.error_msg = "String constant too long";
@@ -154,6 +159,11 @@ RE_STRING_END   "\""
     {RE_NULL_CHAR} {
         cool_yylval.error_msg = "String contains null character";
         BEGIN(IN_STRING);
+ 	return (ERROR);
+    }
+    <<EOF>> {
+        cool_yylval.error_msg = "EOF in string constant";
+        BEGIN(INITIAL);
  	return (ERROR);
     }
     {RE_NEWLINE}|. {
@@ -199,6 +209,11 @@ RE_STRING_END   "\""
 	    comment_depth = 0;
  	    BEGIN(INITIAL);
 	}
+    }
+    <<EOF>> {
+        cool_yylval.error_msg = "EOF in comment";
+        BEGIN(INITIAL);
+ 	return (ERROR);
     }
     . ;
 }
@@ -319,6 +334,10 @@ RE_STRING_END   "\""
     string_buf[1] = '\0';
     cool_yylval.error_msg = string_buf;
     return (ERROR);
+}
+
+<<EOF>> {
+    yyterminate();
 }
 
 }
